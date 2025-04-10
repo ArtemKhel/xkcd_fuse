@@ -1,5 +1,7 @@
 use std::{cmp::min, collections::HashSet, num::NonZeroU32, path::PathBuf};
+use std::sync::{Arc,Mutex};
 
+use indicatif::{ProgressBar, ProgressStyle};
 use futures::{StreamExt, stream::FuturesUnordered};
 use governor::{Quota, RateLimiter};
 use log::{error, info, warn};
@@ -38,12 +40,11 @@ impl XkcdStorage {
 
         let http_client = reqwest::Client::new();
 
-        // let db_conn = Arc::new(Mutex::new(db_conn));
         Self { db_conn, http_client }
     }
 
     pub async fn ensure_range(&self, start: u32, end: u32) -> Result<(), ()> {
-        const RPS: u32 = 20;
+        const RPS: u32 = 25;
         let limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(RPS).unwrap()));
         let mut tasks = FuturesUnordered::new();
 
@@ -55,16 +56,22 @@ impl XkcdStorage {
         let ids: HashSet<_> = self.get_stored_ids().into_iter().collect();
         let missing = (start..=end).filter(|num| !ids.contains(num)).collect::<Vec<_>>();
 
+        let missing_len = missing.len();
+        let progress_bar = Arc::new(Mutex::new(ProgressBar::new(missing_len as u64)));
+
         for num in missing.into_iter() {
             let permit = limiter.until_ready();
-            let fut = async move {
+            let bar = Arc::clone(&progress_bar);
+            let future = async move {
                 permit.await;
                 self.get_xkcd(num).await;
+                bar.lock().unwrap().inc(1);
             };
-            tasks.push(fut);
+            tasks.push(future);
         }
 
         while tasks.next().await.is_some() {}
+        progress_bar.lock().unwrap().finish_with_message("Done!");
         Ok(())
     }
 
