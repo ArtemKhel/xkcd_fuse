@@ -3,11 +3,11 @@
 use std::io::Write;
 
 use clap::Parser;
-use log::{LevelFilter, info};
+use log::LevelFilter;
 
 use crate::{
     cli::Cli,
-    storage::{XkcdStorage, XkcdStorageConfig},
+    storage::{BlockingXkcdStorage, XkcdStorage, XkcdStorageConfig},
 };
 
 mod api;
@@ -26,17 +26,13 @@ fn init_logger() {
         .unwrap();
 }
 
-// TODO:
-//  - async
-//  - better error handling
-// #[tokio::main]
 fn main() -> Result<(), ()> {
     init_logger();
     let cli = Cli::parse();
-    info!("{cli:?}");
 
     let storage: XkcdStorage = XkcdStorageConfig { db_path: cli.db_path }.into();
-    storage.ensure_range(cli.start, cli.end)?;
-    fs::fuse(cli.mount_point.as_path(), storage);
+    let blocking_storage: BlockingXkcdStorage = storage.into();
+    blocking_storage.ensure_range(cli.start, cli.end)?;
+    fs::fuse(cli.mount_point.as_path(), blocking_storage);
     Ok(())
 }

@@ -34,26 +34,26 @@ impl Display for XkcdApiResponse {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result { write!(f, "Xkcd #{}: {}", self.num, self.title,) }
 }
 
-pub fn fetch_latest(client: &reqwest::blocking::Client) -> Result<XkcdApiResponse, anyhow::Error> {
+pub async fn fetch_latest(client: &reqwest::Client) -> Result<XkcdApiResponse, anyhow::Error> {
     info!("Fetching latest xkcd");
     let url = XKCD_URL.join("info.0.json")?;
-    let resp = client.get(url).send()?;
-    let comic: XkcdApiResponse = resp.json()?;
+    let resp = client.get(url).send().await?;
+    let comic: XkcdApiResponse = resp.json().await?;
     Ok(comic)
 }
 
-pub fn fetch_xkcd(client: &reqwest::blocking::Client, num: u32) -> Result<XkcdApiResponse, anyhow::Error> {
+pub async fn fetch_xkcd(client: &reqwest::Client, num: u32) -> Result<XkcdApiResponse, anyhow::Error> {
     info!("Fetching xkcd {}", num);
     let mut url = XKCD_URL.clone();
     url.path_segments_mut().unwrap().extend([&num.to_string(), JSON]);
-    let resp = client.get(url).send()?;
-    let comic: XkcdApiResponse = resp.json()?;
+    let resp = client.get(url).send().await?;
+    let comic: XkcdApiResponse = resp.json().await?;
     Ok(comic)
 }
 
-pub fn fetch_image(client: &reqwest::blocking::Client, comic: &Xkcd) -> Result<Vec<u8>, anyhow::Error> {
+pub async fn fetch_image(client: &reqwest::Client, comic: &Xkcd) -> Result<Vec<u8>, anyhow::Error> {
     info!("Fetching image for xkcd {}", comic.num);
-    let resp = client.get(comic.image_url.clone()).send()?;
-    let bytes = resp.bytes()?.to_vec();
+    let resp = client.get(comic.image_url.clone()).send().await?;
+    let bytes = resp.bytes().await?.to_vec();
     Ok(bytes)
 }

@@ -61,17 +61,17 @@
 
               fuse3
               fuse3.dev
-              pkg-config
-              sqlite
               openssl
               openssl.dev
+              pkg-config
               s2n-tls
+              sqlite
             ];
 
             RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
-            LD_LIBRARY_PATH = lib.makeLibraryPath [ pkgs.fuse3 openssl s2n-tls ];
-            OPENSSL_DIR = "${pkgs.openssl.dev}";
-            OPENSSL_LIB_DIR = "${pkgs.lib.getLib pkgs.openssl}/lib";
+            LD_LIBRARY_PATH = lib.makeLibraryPath [fuse3 openssl s2n-tls];
+            OPENSSL_DIR = "${openssl.dev}";
+            OPENSSL_LIB_DIR = "${lib.getLib openssl}/lib";
           };
       };
     };
