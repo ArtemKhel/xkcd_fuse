@@ -44,7 +44,7 @@ impl XkcdStorage {
     }
 
     pub async fn ensure_range(&self, start: u32, end: u32) -> Result<(), ()> {
-        const RPS: u32 = 25;
+        const RPS: u32 = 20;
         let limiter = RateLimiter::direct(Quota::per_second(NonZeroU32::new(RPS).unwrap()));
         let mut tasks = FuturesUnordered::new();
 

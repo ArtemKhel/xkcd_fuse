@@ -25,3 +25,17 @@ Options:
   -h, --help                 Print help
   -V, --version              Print version
 ```
+
+##### Build and run
+
+For users of superior package manager (Nix):
+
+```sh 
+nix run -- <args>
+```
+to simply run and
+```sh
+nix develop
+```
+to drop into devshell with all the dependencies
+

@@ -48,31 +48,54 @@
           cargo = toolchain;
           rustc = toolchain;
         };
+
+        env = with pkgs; {
+          LD_LIBRARY_PATH = lib.makeLibraryPath [fuse3 openssl s2n-tls];
+          OPENSSL_DIR = "${openssl.dev}";
+          OPENSSL_LIB_DIR = "${lib.getLib openssl}/lib";
+          OPENSSL_INCLUDE_DIR = "${openssl.dev}/include";
+        };
+
+        buildDeps = with pkgs; [
+          fuse3.dev
+          openssl.dev
+          pkg-config
+          s2n-tls
+        ];
+
+        runtimeDeps = with pkgs; [
+          fuse3
+          openssl
+          sqlite
+        ];
       in {
-        packages.default = naersk'.buildPackage ./.;
+        packages.default =
+          naersk'.buildPackage
+          (env
+          // {
+            src = ./.;
+            # release = false;
+            nativeBuildInputs = (buildDeps ++ (with pkgs; [
+              makeWrapper
+            ]));
+            buildInputs = runtimeDeps;
+            postInstall = ''
+              wrapProgram $out/bin/xkcd_fuse \
+                --set LD_LIBRARY_PATH ${pkgs.lib.makeLibraryPath (with pkgs; [fuse3 openssl])}
+            '';
+          });
 
         formatter = pkgs.alejandra;
 
         devShells.default = with pkgs;
-          mkShell {
+          mkShell (env // {
             buildInputs = [
               toolchain
               cargo-expand
-
-              fuse3
-              fuse3.dev
-              openssl
-              openssl.dev
-              pkg-config
-              s2n-tls
-              sqlite
-            ];
+            ] ++ buildDeps ++ runtimeDeps;
 
             RUST_SRC_PATH = "${toolchain}/lib/rustlib/src/rust/library";
-            LD_LIBRARY_PATH = lib.makeLibraryPath [fuse3 openssl s2n-tls];
-            OPENSSL_DIR = "${openssl.dev}";
-            OPENSSL_LIB_DIR = "${lib.getLib openssl}/lib";
-          };
+          });
       };
     };
 }
